@@ -1,0 +1,26 @@
+{
+    "name": "tiktok-mpc",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "TikTok Live MCP server",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "keywords": [
+        "mcp",
+        "tiktok",
+        "livestream",
+        "chat"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "1.8.0",
+        "tiktok-live-connector": "1.2.3",
+        "zod": "^3.0.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
