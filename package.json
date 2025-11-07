@@ -1,9 +1,12 @@
 {
     "name": "tiktok-mpc",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "module",
     "description": "TikTok Live MCP server",
     "main": "index.js",
+    "bin": {
+        "tiktok-mpc": "index.js"
+    },
     "scripts": {
         "start": "node index.js"
     },
