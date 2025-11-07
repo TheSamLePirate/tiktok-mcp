@@ -466,8 +466,7 @@ server.tool(
 
 server.tool(
   "reccord-video",
-  "Record a video from a given url. Use the full url with expire and sign",
-  "return the pid of the ffmpeg process",
+  "Record a video from a given url. Use the full url with expire and sign"
   {
     url: z.string().describe("Video URL to record. Use the full url with expire and sign"),
     filename: z.string().describe("Output filename for the recorded video")
