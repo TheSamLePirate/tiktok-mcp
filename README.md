@@ -28,6 +28,7 @@ git clone https://github.com/TheSamLePirate/tiktok-mcp
 install dependencies
 
 ```
+cd tiktok-mcp
 npm install
 ```
 
