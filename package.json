@@ -25,7 +25,7 @@
     "license": "MIT",
     "dependencies": {
         "@modelcontextprotocol/sdk": "1.8.0",
-        "tiktok-live-connector": "1.2.3",
+        "tiktok-live-connector": "2.1.0",
         "zod": "^3.0.0"
     },
     "engines": {

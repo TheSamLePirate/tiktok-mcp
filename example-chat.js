@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { WebcastPushConnection } from "tiktok-live-connector";
+import { TikTokLiveConnection, WebcastEvent } from 'tiktok-live-connector';
 import fs from "fs";
 import path from "path";
 
@@ -87,7 +87,8 @@ async function connectToChat(username) {
         };
         
         // Créer une nouvelle connexion
-        const connection = new WebcastPushConnection(cleanUsername, options);
+        //const connection = new WebcastPushConnection(cleanUsername, options);
+        const connection = new TikTokLiveConnection(cleanUsername);
         
         // Compteur de messages
         let messageCount = 0;
@@ -97,9 +98,9 @@ async function connectToChat(username) {
             messageCount++;
             
             const messageData = {
-                uniqueId: data.uniqueId,
-                userId: data.userId,
-                nickname: data.nickname,
+                uniqueId: data.user.uniqueId,
+                userId: data.user.userId,
+                nickname: data.user.nickname,
                 comment: data.comment,
                 timestamp: new Date().toISOString()
             };

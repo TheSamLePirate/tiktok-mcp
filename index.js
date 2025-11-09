@@ -3,6 +3,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { WebcastPushConnection } from "tiktok-live-connector";
+import { TikTokLiveConnection, WebcastEvent } from 'tiktok-live-connector';
+
 import { z } from "zod";
 import { spawn } from "child_process";
 
@@ -57,7 +59,7 @@ server.tool(
 
       
       // Create a new connection
-      const connection = new WebcastPushConnection(username,options);
+      const connection = new TikTokLiveConnection(username);
       
       // Connect to the stream and handle the errors
       const state = await connection.connect(); 
@@ -66,7 +68,7 @@ server.tool(
       // Store the connection
 
       //get stream url from state if roomInfo and stream_url.flv_pull_url exists
-      const streamUrl = state.roomInfo && state.roomInfo.stream_url && state.roomInfo.stream_url.flv_pull_url ? state.roomInfo.stream_url.flv_pull_url : "No stream url";
+      const streamUrl = state.roomInfo && state.roomInfo.data.stream_url && state.roomInfo.data.stream_url.flv_pull_url ? state.roomInfo.data.stream_url.flv_pull_url : "No stream url";
 
 
       
@@ -110,61 +112,7 @@ server.tool(
   }
 );
 
-server.tool(
-  "tiktok-stream-url",
-  "Get the stream url for a given username and session id. Do not need to connect first.",
-  {
-    username: z.string().describe("TikTok username of someone who is currently live, start with @")
-  },
-  async ({ username}) => {
-    try {
-      // Check if already connected to this stream
-      
 
-      var options = {};
-      options.fetchRoomInfoOnConnect = true;
-      options.processInitialData = true;
-      options.sessionId = sessionId || "";
-
-      
-      // Create a new connection
-      const connection = new WebcastPushConnection(username,options);
-      
-      // Connect to the stream and handle the errors
-      const state = await connection.connect(); 
-
-      
-      // Store the connection
-
-      //get stream url from state if roomInfo and stream_url.flv_pull_url exists
-      const streamUrl = state.roomInfo && state.roomInfo.stream_url && state.roomInfo.stream_url.flv_pull_url ? state.roomInfo.stream_url.flv_pull_url : "No stream url";
-      connection.disconnect();
-      
-      
-
-      // Set up event listeners
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Stream url for ${username} is ${JSON.stringify(streamUrl)}`
-          }
-        ]
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: `Failed to connect to ${username}'s livestream: ${error.message}`
-          }
-        ]
-      };
-    }
-  }
-);
 
 server.tool(
   "tiktok-disconnect",
@@ -242,7 +190,7 @@ server.tool(
             type: "text",
             text: recentMessages.length > 0
               ? `Recent messages from ${username}'s livestream:\n\n${recentMessages.map(msg => 
-                  `${msg.timestamp} - ${msg.uniqueId}: ${msg.comment}`).join('\n')}`
+                  `${msg.timestamp} - ${msg.nickname} (${msg.uniqueId}): ${msg.comment}`).join('\n')}`
               : `No messages yet in ${username}'s livestream`
           }
         ]
@@ -310,6 +258,81 @@ server.tool(
     }
   }
 );
+
+server.tool(
+  "tiktok-likes",
+  {
+    username: z.string().describe("TikTok username, start with @"),
+    count: z.number().optional().describe("Number of likes to retrieve (default: 10)")
+  },
+  async ({ username, count = 10 }) => {
+    try {
+      if (!connections.has(username)) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Not connected to ${username}'s livestream. Use tiktok-connect first.`
+            }
+          ]
+        };
+      }
+
+      
+
+      const { likes } = connections.get(username);
+      const recentLikes = likes.slice(-count);
+
+      //likescount by username
+      
+      const likesCountByUser = {};
+      recentLikes.forEach(like => {
+        if (!likesCountByUser[like.nickname]) {
+          likesCountByUser[like.nickname] = {
+            likeCount: like.likeCount,
+          };
+        }
+        likesCountByUser[like.nickname].likeCount += like.likeCount;
+      });
+
+      //dict to array
+      const likesArray = Object.keys(likesCountByUser).map(nickname => {
+        return {
+          nickname,
+          likeCount: likesCountByUser[nickname].likeCount,
+        };
+      });
+
+      //sort by likeCount
+      likesArray.sort((a, b) => b.likeCount - a.likeCount);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: likesArray.length > 0
+              ? `Recent likes from ${username}'s livestream:\n\n${likesArray.map(like => 
+                  `${like.nickname} : ${like.likeCount} likes`).join('\n')}`
+              : `No likes yet in ${username}'s livestream`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: `Error getting gifts from ${username}'s livestream: ${error.message}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+
 
 server.tool(
   "tiktok-info",
@@ -541,9 +564,9 @@ function setupEventListeners(username, connection) {
     const streamData = connections.get(username);
     if (streamData) {
       const messageData = {
-        uniqueId: data.uniqueId,
-        userId: data.userId,
-        nickname: data.nickname,
+        uniqueId: data.user.uniqueId,
+        userId: data.user.userId,
+        nickname: data.user.nickname,
         comment: data.comment,
         timestamp: new Date().toISOString()
       };
@@ -565,9 +588,9 @@ function setupEventListeners(username, connection) {
     const streamData = connections.get(username);
     if (streamData) {
       const likeData = {
-        uniqueId: data.uniqueId,
-        userId: data.userId,
-        nickname: data.nickname,
+        uniqueId: data.user.uniqueId,
+        userId: data.user.userId,
+        nickname: data.user.nickname,
         timestamp: new Date().toISOString(),
         likeCount: data.likeCount
       };
@@ -576,13 +599,13 @@ function setupEventListeners(username, connection) {
   });
 
   // Handle users
-  connection.on('roomUser', data => {
+  connection.on(WebcastEvent.MEMBER, data => {
     const streamData = connections.get(username);
     if (streamData) {
       const userData = {
         uniqueId: data.uniqueId,
-        userId: data.userId,
-        nickname: data.nickname,
+        userId: data.user.userId,
+        nickname: data.user.nickname,
         timestamp: new Date().toISOString()
       };
       streamData.users.push(userData);
@@ -595,11 +618,7 @@ function setupEventListeners(username, connection) {
     const streamData = connections.get(username);
     if (streamData) {
       const giftData = {
-        uniqueId: data.uniqueId,
-        userId: data.userId,
-        giftId: data.giftId,
-        nickname: data.nickname,
-        giftName: data.giftName,
+        nickname: data.user.nickname,
         diamondCount: data.diamondCount,
         repeatCount: data.repeatCount,
         timestamp: new Date().toISOString()
@@ -613,7 +632,7 @@ function setupEventListeners(username, connection) {
   });
 
   // Handle viewer count updates
-  connection.on('roomUser', data => {
+  connection.on(WebcastEvent.ROOM_USER, data => {
     
     const streamData = connections.get(username);
     if (streamData) {

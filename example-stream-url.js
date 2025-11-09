@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-import { WebcastPushConnection } from "tiktok-live-connector";
+import { TikTokLiveConnection, WebcastEvent } from 'tiktok-live-connector';
 
 // Charger le sessionId depuis la variable d'environnement
-const sessionId = process.env.TIKTOK_SESSION_ID || "a7dfb011ec6d32287cb5b4ab37cbd1d6";
 
 /**
  * Récupère l'URL de stream pour un utilisateur TikTok donné
@@ -21,17 +20,18 @@ async function getStreamUrl(username) {
         const options = {
             fetchRoomInfoOnConnect: true,
             processInitialData: true,
-            sessionId: sessionId
         };
         
         // Créer une nouvelle connexion
-        const connection = new WebcastPushConnection(cleanUsername, options);
+        //const connection = new WebcastPushConnection(cleanUsername, options);
+        const connection = new TikTokLiveConnection(cleanUsername);
+
         
         // Se connecter au stream
         const state = await connection.connect();
         
         // Extraire les URLs de stream
-        const streamUrls = state.roomInfo?.stream_url || {};
+        const streamUrls = state.roomInfo?.data.stream_url || {};
         
         // Déconnecter immédiatement
         connection.disconnect();
