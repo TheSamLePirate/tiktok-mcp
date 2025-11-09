@@ -1,19 +1,19 @@
 {
     "name": "tiktok-mpc",
-    "version": "1.0.2",
+    "version": "2.0.0",
     "type": "module",
     "description": "TikTok Live MCP server",
-    "main": "index.js",
+    "main": "app.js",
     "homepage": "https://github.com/TheSamLePirate/tiktok-mcp",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/TheSamLePirate/tiktok-mcp.git"
     },
     "bin": {
-        "tiktok-mpc": "index.js"
+        "tiktok-mpc": "app.js"
     },
     "scripts": {
-        "start": "node index.js"
+        "start": "node app.js"
     },
     "keywords": [
         "mcp",
