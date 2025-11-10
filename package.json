@@ -25,7 +25,10 @@
     "license": "MIT",
     "dependencies": {
         "@modelcontextprotocol/sdk": "1.8.0",
+        "@opencode-ai/sdk": "^1.0.51",
+        "openai": "^6.8.1",
         "tiktok-live-connector": "2.1.0",
+        "ws": "^8.18.0",
         "zod": "^3.0.0"
     },
     "engines": {
