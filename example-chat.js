@@ -19,7 +19,7 @@ function getFormattedDateTime() {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-    
+
     return `${year}${month}${day}_${hours}${minutes}${seconds}`;
 }
 
@@ -30,10 +30,10 @@ function getFormattedDateTime() {
  */
 function formatTimestamp(timestamp) {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('fr-FR', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit' 
+    return date.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
     });
 }
 
@@ -66,41 +66,41 @@ async function connectToChat(username) {
     try {
         // Retirer le @ si présent
         const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
-        
+
         // Créer le nom du fichier log
         const logFileName = `${cleanUsername}_${getFormattedDateTime()}.txt`;
         const logFilePath = path.join(process.cwd(), logFileName);
-        
+
         console.log(`🔍 Connexion au chat de ${cleanUsername}...`);
         console.log(`📝 Les messages seront enregistrés dans: ${logFileName}\n`);
-        
+
         // Créer le fichier log avec un en-tête
         const header = `=== Chat TikTok Live de @${cleanUsername} ===\n` +
-                      `Début de l'enregistrement: ${new Date().toLocaleString('fr-FR')}\n` +
-                      `${'='.repeat(60)}\n\n`;
+            `Début de l'enregistrement: ${new Date().toLocaleString('fr-FR')}\n` +
+            `${'='.repeat(60)}\n\n`;
         fs.writeFileSync(logFilePath, header, 'utf8');
-        
+
         // Configuration de la connexion
         const options = {
             fetchRoomInfoOnConnect: true,
             processInitialData: true,
-            sessionId:"b427a71163104c8833491455a6655af9",
-            ttTargetIdc:"eu-ttp2",
-            signApiKey:"euler_ZTJkN2JhNWUyMDc0OTU5ODY4ZGMyZGE5ZjU5ZWYzM2MwNzAzNmJjOTJkM2EwZDVlN2I4ZDI5",
+            sessionId: "tiktok-cookie",
+            ttTargetIdc: "eu-ttp2",
+            signApiKey: "euler-cookie",
             //sessionId: sessionId
         };
-        
+
         // Créer une nouvelle connexion
         //const connection = new WebcastPushConnection(cleanUsername, options);
-        const connection = new TikTokLiveConnection(cleanUsername,options);
-        
+        const connection = new TikTokLiveConnection(cleanUsername, options);
+
         // Compteur de messages
         let messageCount = 0;
-        
+
         // Gérer les messages du chat
         connection.on('chat', (data) => {
             messageCount++;
-            
+
             const messageData = {
                 uniqueId: data.user.uniqueId,
                 userId: data.user.userId,
@@ -109,68 +109,68 @@ async function connectToChat(username) {
                 timestamp: new Date().toISOString(),
                 user: data.user.profilePicture.url[0]
             };
-            
+
             // Afficher dans la console
             displayMessage(messageData);
-            
+
             // Enregistrer dans le fichier
             logMessage(logFilePath, messageData);
         });
-        
+
         // Gérer les likes
         // connection.on('like', (data) => {
         //     const likeLog = `[${new Date().toISOString()}] ❤️ ${data.nickname} (@${data.uniqueId}) a envoyé ${data.likeCount} like(s)\n`;
         //     fs.appendFileSync(logFilePath, likeLog, 'utf8');
         //     console.log(`\n❤️  ${data.nickname} a envoyé ${data.likeCount} like(s)`);
         // });
-        
+
         // Gérer les cadeaux
         // connection.on('gift', (data) => {
         //     const giftLog = `[${new Date().toISOString()}] 🎁 ${data.nickname} (@${data.uniqueId}) a envoyé ${data.giftName} x${data.repeatCount} (${data.diamondCount} diamants)\n`;
         //     fs.appendFileSync(logFilePath, giftLog, 'utf8');
         //     console.log(`\n🎁 ${data.nickname} a envoyé ${data.giftName} x${data.repeatCount} (${data.diamondCount} diamants)`);
         // });
-        
+
         // Gérer les nouveaux spectateurs
         // connection.on('roomUser', (data) => {
         //     const viewerLog = `[${new Date().toISOString()}] 👁️  ${data.viewerCount} spectateurs dans le live\n`;
         //     fs.appendFileSync(logFilePath, viewerLog, 'utf8');
         //     console.log(`\n👁️  ${data.viewerCount} spectateurs`);
         // });
-        
+
         // Gérer la déconnexion
         connection.on('disconnected', () => {
             const disconnectLog = `\n${'='.repeat(60)}\n` +
-                                 `Fin de l'enregistrement: ${new Date().toLocaleString('fr-FR')}\n` +
-                                 `Total de messages: ${messageCount}\n` +
-                                 `${'='.repeat(60)}\n`;
+                `Fin de l'enregistrement: ${new Date().toLocaleString('fr-FR')}\n` +
+                `Total de messages: ${messageCount}\n` +
+                `${'='.repeat(60)}\n`;
             fs.appendFileSync(logFilePath, disconnectLog, 'utf8');
-            
+
             console.log(`\n\n❌ Déconnecté du chat de ${cleanUsername}`);
             console.log(`📊 Total de messages enregistrés: ${messageCount}`);
             console.log(`📝 Log sauvegardé dans: ${logFileName}`);
             process.exit(0);
         });
-        
+
         // Gérer les erreurs
         connection.on('error', (err) => {
             console.error(`\n❌ Erreur de connexion:`, err.message);
             const errorLog = `[${new Date().toISOString()}] ❌ ERREUR: ${err.message}\n`;
             fs.appendFileSync(logFilePath, errorLog, 'utf8');
         });
-        
-        // Se connecter au stream
-        const state = await connection.connect().catch((err)=>{console.log(err)});
 
-        
-        
+        // Se connecter au stream
+        const state = await connection.connect().catch((err) => { console.log(err) });
+
+
+
         // console.log(`✅ Connecté au live de ${cleanUsername}!`);
         // console.log(`🆔 Room ID: ${state.roomId}`);
         // console.log(`👥 Spectateurs: ${state.viewerCount || 0}`);
         // console.log(`\n${'─'.repeat(60)}`);
         // console.log(`Écoute des messages en cours... (Ctrl+C pour arrêter)`);
         // console.log(`${'─'.repeat(60)}\n`);
-        
+
         // Enregistrer les infos de connexion dans le fichier
         // const connectionInfo = `Connecté avec succès!\n` +
         //                       `Room ID: ${state.roomId}\n` +
@@ -179,13 +179,13 @@ async function connectToChat(username) {
         //                       `MESSAGES DU CHAT\n` +
         //                       `${'─'.repeat(60)}\n\n`;
         // fs.appendFileSync(logFilePath, connectionInfo, 'utf8');
-        
+
         // Gérer l'arrêt propre avec Ctrl+C
         process.on('SIGINT', () => {
             console.log(`\n\n⏹️  Arrêt en cours...`);
             connection.disconnect();
         });
-        
+
     } catch (error) {
         console.error(`❌ Erreur lors de la connexion au chat de ${username}:`);
         console.error(error.message);
