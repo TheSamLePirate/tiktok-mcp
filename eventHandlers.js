@@ -74,10 +74,11 @@ export function setupEventListeners(username, connection, connections, config,cl
     if (!streamData) return;
 
     const userData = {
-      uniqueId: data.uniqueId,
+      uniqueId: data.user.uniqueId,  //Might break if user object is missing
       userId: data.user.userId,
       nickname: data.user.nickname,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      profilePictureUrl: data.user.profilePicture.url[0]
     };
 
     streamData.users.push(userData);
@@ -119,7 +120,8 @@ export function setupEventListeners(username, connection, connections, config,cl
     if (reconnectAttempts >= config.MAX_RECONNECT_ATTEMPTS) {
       const maxAttemptsError = `Max reconnection attempts reached. Removing connection.`;
       logError('connection', username, maxAttemptsError);
-      connections.delete(username);
+      connections.set("active", false);
+      //connections.delete(username);
       return;
     }
 

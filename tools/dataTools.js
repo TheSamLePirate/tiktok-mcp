@@ -168,6 +168,53 @@ export function registerDataTools(server, connections) {
   );
 
   // ============================================================================
+  // Tool: Show Users
+  // ============================================================================
+
+  server.tool(
+    "show-users",
+    "Retrieve list of users who joined the TikTok livestream",
+    {
+      username: z.string().describe("TikTok username (prefix @ optional)"),
+      count: z.number().optional().describe("Number of recent users to show (default: 20)")
+    },
+    async ({ username, count = 20 }) => {
+      try {
+        username = normalizeUsername(username);
+
+        if (!connections.has(username)) {
+          return createErrorResponse(
+            `Not connected to ${username}'s livestream. Use tiktok-connect first.`
+          );
+        }
+
+        const { users } = connections.get(username);
+
+        if (users.length === 0) {
+          return createSuccessResponse(`No users have joined ${username}'s livestream yet`);
+        }
+
+        const recentUsers = users.slice(-count);
+
+        const formattedUsers = recentUsers
+          .map((user, index) => 
+            `${index + 1}. [${user.timestamp}] ${user.nickname} (@${user.userId} : ${user.profilePictureUrl || 'No Profile Picture'})`
+          )
+          .join('\n');
+
+        return createSuccessResponse(
+          `Recent users who joined ${username}'s livestream (${recentUsers.length} of ${users.length} total):\n\n${formattedUsers}`
+        );
+      } catch (error) {
+        logError('tool', 'show-users', error);
+        return createErrorResponse(
+          `Error getting users from ${username}'s livestream: ${error.message}`
+        );
+      }
+    }
+  );
+
+  // ============================================================================
   // Tool: Save Messages to File
   // ============================================================================
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { TikTokLiveConnection, WebcastEvent } from 'tiktok-live-connector';
+import { TikTokLiveConnection, WebcastEvent ,WebcastPushConnection} from 'tiktok-live-connector';
 
 // Charger le sessionId depuis la variable d'environnement
 
@@ -18,23 +18,50 @@ async function getStreamUrl(username) {
         
         // Configuration de la connexion
         const options = {
-            fetchRoomInfoOnConnect: true,
-            processInitialData: true,
+            fetchRoomInfoOnConnect: false,
+            processInitialData: false,
+            sessionId:"b427a71163104c8833491455a6655af9",
+            ttTargetIdc:"eu-ttp2",
+            signApiKey:"euler_ZTJkN2JhNWUyMDc0OTU5ODY4ZGMyZGE5ZjU5ZWYzM2MwNzAzNmJjOTJkM2EwZDVlN2I4ZDI5",
+            
         };
         
         // Créer une nouvelle connexion
         //const connection = new WebcastPushConnection(cleanUsername, options);
-        const connection = new TikTokLiveConnection(cleanUsername);
+        const connection = new TikTokLiveConnection(cleanUsername,options);
+
+        //const connection = new WebcastPushConnection(cleanUsername, options);
 
         
         // Se connecter au stream
-        const state = await connection.connect();
+
+
         
+
+        const state = await connection.connect().catch((err)=>{console.log(err)});
+
+
+
+        //console.log(state);
+
+        
+        
+        const roomInfo=await connection.fetchRoomInfo();
+
+        console.log("Stream url:",roomInfo?.data.stream_url.flv_pull_url);
+
+        return "state";
+
+
+
+
         // Extraire les URLs de stream
         const streamUrls = state.roomInfo?.data.stream_url || {};
         
         // Déconnecter immédiatement
         connection.disconnect();
+
+        exit();
         
         console.log(`\n✅ URLs de stream pour @${cleanUsername}:\n`);
         

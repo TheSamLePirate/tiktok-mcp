@@ -55,6 +55,7 @@ function displayMessage(messageData) {
     const time = formatTimestamp(messageData.timestamp);
     console.log(`\n💬 [${time}] ${messageData.nickname} (@${messageData.uniqueId})`);
     console.log(`   ${messageData.comment}`);
+    console.log(JSON.stringify(messageData.user));
 }
 
 /**
@@ -83,12 +84,15 @@ async function connectToChat(username) {
         const options = {
             fetchRoomInfoOnConnect: true,
             processInitialData: true,
+            sessionId:"b427a71163104c8833491455a6655af9",
+            ttTargetIdc:"eu-ttp2",
+            signApiKey:"euler_ZTJkN2JhNWUyMDc0OTU5ODY4ZGMyZGE5ZjU5ZWYzM2MwNzAzNmJjOTJkM2EwZDVlN2I4ZDI5",
             //sessionId: sessionId
         };
         
         // Créer une nouvelle connexion
         //const connection = new WebcastPushConnection(cleanUsername, options);
-        const connection = new TikTokLiveConnection(cleanUsername);
+        const connection = new TikTokLiveConnection(cleanUsername,options);
         
         // Compteur de messages
         let messageCount = 0;
@@ -102,7 +106,8 @@ async function connectToChat(username) {
                 userId: data.user.userId,
                 nickname: data.user.nickname,
                 comment: data.comment,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                user: data.user.profilePicture.url[0]
             };
             
             // Afficher dans la console
@@ -155,23 +160,25 @@ async function connectToChat(username) {
         });
         
         // Se connecter au stream
-        const state = await connection.connect();
+        const state = await connection.connect().catch((err)=>{console.log(err)});
+
         
-        console.log(`✅ Connecté au live de ${cleanUsername}!`);
-        console.log(`🆔 Room ID: ${state.roomId}`);
-        console.log(`👥 Spectateurs: ${state.viewerCount || 0}`);
-        console.log(`\n${'─'.repeat(60)}`);
-        console.log(`Écoute des messages en cours... (Ctrl+C pour arrêter)`);
-        console.log(`${'─'.repeat(60)}\n`);
+        
+        // console.log(`✅ Connecté au live de ${cleanUsername}!`);
+        // console.log(`🆔 Room ID: ${state.roomId}`);
+        // console.log(`👥 Spectateurs: ${state.viewerCount || 0}`);
+        // console.log(`\n${'─'.repeat(60)}`);
+        // console.log(`Écoute des messages en cours... (Ctrl+C pour arrêter)`);
+        // console.log(`${'─'.repeat(60)}\n`);
         
         // Enregistrer les infos de connexion dans le fichier
-        const connectionInfo = `Connecté avec succès!\n` +
-                              `Room ID: ${state.roomId}\n` +
-                              `Spectateurs initiaux: ${state.viewerCount || 0}\n\n` +
-                              `${'─'.repeat(60)}\n` +
-                              `MESSAGES DU CHAT\n` +
-                              `${'─'.repeat(60)}\n\n`;
-        fs.appendFileSync(logFilePath, connectionInfo, 'utf8');
+        // const connectionInfo = `Connecté avec succès!\n` +
+        //                       `Room ID: ${state.roomId}\n` +
+        //                       `Spectateurs initiaux: ${state.viewerCount || 0}\n\n` +
+        //                       `${'─'.repeat(60)}\n` +
+        //                       `MESSAGES DU CHAT\n` +
+        //                       `${'─'.repeat(60)}\n\n`;
+        // fs.appendFileSync(logFilePath, connectionInfo, 'utf8');
         
         // Gérer l'arrêt propre avec Ctrl+C
         process.on('SIGINT', () => {

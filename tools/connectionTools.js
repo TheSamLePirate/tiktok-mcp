@@ -15,6 +15,22 @@ import { createOpencodeClient } from "@opencode-ai/sdk"
 
 
 
+
+const failbackStreamUrl=async(username,options)=>{
+  try {
+    const connectionFailback = new TikTokLiveConnection(username,options);
+    const stateFailback = await connectionFailback.connect().catch((err)=>{console.log(err)});
+    const roomInfoFailback=await connectionFailback.fetchRoomInfo();
+    console.log("Failback Stream url:",roomInfoFailback?.data.stream_url.flv_pull_url);
+    connectionFailback.disconnect();
+    return roomInfoFailback?.data.stream_url.flv_pull_url || "No stream URL available";
+  }
+  catch (error) {
+    logError('tool', 'tiktok-stream-failback', error);
+    return "No stream URL available";
+  }
+};
+
 /**
  * Registers connection-related tools with the MCP server
  * @param {McpServer} server - MCP server instance
@@ -36,6 +52,8 @@ export function registerConnectionTools(server, connections, config) {
     async ({ username }) => {
       try {
         username = normalizeUsername(username);
+
+        
         
 
         // Check if already connected
@@ -49,21 +67,49 @@ export function registerConnectionTools(server, connections, config) {
 
       
           
-        await client.tui.showToast({
-          body: { title: "Connection Status", message: `Connected to ${username}`, variant: "success" },
-        })
+        
 
         // Create new connection
         const connection = new TikTokLiveConnection(username, {
           fetchRoomInfoOnConnect: true,
           processInitialData: true,
-          signApiKey:process.env.EULER_API_KEY || ""
-          //signApiKey: "euler_ZTJkN2JhNWUyMDc0OTU5ODY4ZGMyZGE5ZjU5ZWYzM2MwNzAzNmJjOTJkM2EwZDVlN2I4ZDI5"
+          signApiKey: process.env.EULER_API_KEY || ""
         });
+
+        const isLive=await connection.fetchIsLive();
+        logError('tool', 'tiktok-connect', "Connection is :" + (isLive ? "live" : "not live"));
+        if(!isLive){
+          await client.tui.showToast({
+            body: { title: "Connection Status", message: `Failed to connect to ${username}`, variant: "error" },
+          })
+
+          
+          return createErrorResponse(`${username} is not currently live.`);
+        }
 
         // Connect to the stream
         const state = await connection.connect();
-        const streamUrl = extractStreamUrl(state.roomInfo);
+        let streamUrl = extractStreamUrl(state.roomInfo);
+
+        if (streamUrl == "No stream URL available") {
+          logError('tool', 'tiktok-connect', `No stream URL found for ${username}`);
+          //Failback to connection with auth
+          streamUrl = "No stream URL available";
+
+          const optionsFailback= {
+            fetchRoomInfoOnConnect: false,
+            processInitialData: false,
+            sessionId:process.env.TIKTOK_SESSION_ID || "",
+            ttTargetIdc:process.env.TIKTOK_IDC || "",
+            signApiKey: process.env.EULER_API_KEY || ""
+          };
+          streamUrl = await failbackStreamUrl(username,optionsFailback);
+          if (streamUrl == "No stream URL available") {
+            logError('tool', 'tiktok-connect', `Failback also failed to get stream URL for ${username}`);
+          } else {
+            logError('tool', 'tiktok-connect', `Failback succeeded to get stream URL for ${username}`);
+          }
+        }
 
         // Store connection data
         connections.set(username, {
@@ -75,11 +121,16 @@ export function registerConnectionTools(server, connections, config) {
           users: [],
           viewers: state.viewerCount || 0,
           streamUrl,
-          roomInfo: state.roomInfo
+          roomInfo: state.roomInfo,
+          active: true
         });
 
         // Set up event listeners
         setupEventListeners(username, connection, connections, config, client);
+
+        await client.tui.showToast({
+          body: { title: "Connection Status", message: `Connected to ${username}`, variant: "success" },
+        })
 
         return createSuccessResponse(
           `Successfully connected to ${username}'s livestream\n` +
@@ -117,7 +168,9 @@ export function registerConnectionTools(server, connections, config) {
 
         const { connection } = connections.get(username);
         connection.disconnect();
-        connections.delete(username);
+        connections.set("active", false);
+        //connections.delete(username);
+
 
         return createSuccessResponse(`Successfully disconnected from ${username}'s livestream`);
       } catch (error) {
@@ -146,7 +199,8 @@ export function registerConnectionTools(server, connections, config) {
         const connectionList = Array.from(connections.entries())
           .map(([username, info]) => 
             `${username} - Room ID: ${info.roomId}, Viewers: ${info.viewers}, ` +
-            `Messages: ${info.messages.length}, Gifts: ${info.gifts.length}`
+            `Messages: ${info.messages.length}, Gifts: ${info.gifts.length}` +
+            `, Active: ${info.active}`
           )
           .join('\n');
 
@@ -186,6 +240,7 @@ export function registerConnectionTools(server, connections, config) {
           `Stream Information for ${username}\n` +
           `${'='.repeat(50)}\n` +
           `Room ID: ${streamInfo.roomId}\n` +
+          `Active: ${streamInfo.active}\n` +
           `Current Viewers: ${streamInfo.viewers}\n` +
           `Total Messages: ${streamInfo.messages.length}\n` +
           `Total Gifts: ${streamInfo.gifts.length}\n` +
